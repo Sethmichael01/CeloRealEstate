@@ -9,6 +9,9 @@ import BigNumber from "bignumber.js";
 import Estate from "./abis/Estate.abi.json";
 import erc20Abi from "./abis/erc20.abi.json";
 
+// import loader library
+import AWN from "awesome-notifications";
+
 // import css
 import "@celo-tools/use-contractkit/lib/styles.css";
 
@@ -16,9 +19,10 @@ import "@celo-tools/use-contractkit/lib/styles.css";
 const celo_address = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 const real_estate_address = "0xe3A3F5dBA7b45FDe3572363e0fD62bDc2374C652";
 
-const App = () => {
-  const [celoBalance, setCeloBalance] = useState(0);
+// initialize library
+const notifier = new AWN();
 
+const App = () => {
   const [cUSDBalance, setcUSDBalance] = useState(0);
   const [contract, setcontract] = useState(null);
   const [address, setAddress] = useState(null);
@@ -47,12 +51,14 @@ const App = () => {
 
   useEffect(() => {
     // connect the users wallet
+
     connectCeloWallet();
   }, []);
 
   const connectCeloWallet = async () => {
     if (window.celo) {
       // notification("⚠️ Please approve this DApp to use it.")
+
       try {
         await window.celo.enable();
         // notificationOff()
@@ -67,12 +73,15 @@ const App = () => {
         await setAddress(user_address);
 
         await setKit(kit);
+        return true;
       } catch (error) {
         console.log({ error });
         // notification(`⚠️ ${error}.`)
       }
     } else {
-      console.log("please install the extension");
+      notifier.alert(
+        "You need to install the CeloExtensionWallet to use this dapp "
+      );
       // notification("⚠️ Please install the CeloExtensionWallet.")
     }
   };
@@ -87,13 +96,11 @@ const App = () => {
 
   const getBalance = async () => {
     const balance = await kit.getTotalBalance(address);
-    const celoBalance = balance.CELO.shiftedBy(-ERC20_DECIMALS).toFixed(2);
     const USDBalance = balance.cUSD.shiftedBy(-ERC20_DECIMALS).toFixed(2);
 
     const contract = new kit.web3.eth.Contract(Estate, real_estate_address);
 
     setcontract(contract);
-    setCeloBalance(celoBalance);
     setcUSDBalance(USDBalance);
   };
 
@@ -137,29 +144,56 @@ const App = () => {
     setavailableProperties(available_properties);
     setallProperties(all_properties);
     setnotAvailableProperties(not_available_properties);
+    return true;
   };
 
-  useEffect(() => {
-    if (contract) return getProperties();
-  }, [contract]);
+  const _contract_buy_property = async (_price, _index) => {
+    const cUSDContract = new kit.web3.eth.Contract(erc20Abi, celo_address);
 
-  const buyProperty = async (_price, _index) => {
+    const cost = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
+
     try {
-      const cUSDContract = new kit.web3.eth.Contract(erc20Abi, celo_address);
-
-      const cost = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
-
-      console.log({ cost, _index });
-      const result = await cUSDContract.methods
+      await cUSDContract.methods
         .approve(real_estate_address, cost)
         .send({ from: address });
 
       await contract.methods.buyProperty(_index).send({ from: address });
       // return result
-      getBalance();
-      getProperties();
+      await getBalance();
+      await getProperties();
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const buyProperty = async (_price, _index) => {
+    try {
+      notifier.asyncBlock(
+        _contract_buy_property(_price, _index),
+        "Property has been purchased successfully!!!",
+        "Failed to purchase property",
+        "Purchasing your dream property"
+      );
     } catch (error) {
       console.log({ error });
+    }
+  };
+
+  const _contract_add_property = async () => {
+    try {
+      await contract.methods
+        .addProperty(
+          property_title,
+          property_description,
+          property_image,
+          property_price
+        )
+        .send({ from: address });
+      await getProperties();
+      return true;
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -183,23 +217,15 @@ const App = () => {
         return alert("Please enter all fields");
       }
       const cUSDContract = new kit.web3.eth.Contract(erc20Abi, celo_address);
-
       const price = new BigNumber(property_price)
         .shiftedBy(ERC20_DECIMALS)
         .toString();
-
-      console.log({ price });
-
-      await contract.methods
-        .addProperty(
-          property_title,
-          property_description,
-          property_image,
-          property_price
-        )
-        .send({ from: address });
-
-      getProperties();
+      notifier.asyncBlock(
+        _contract_add_property(),
+        "Property has been added successfully...",
+        "Adding property failed",
+        "Adding Property to the Blockchain..."
+      );
     } catch (error) {
       console.log({ error });
     }
@@ -575,7 +601,14 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (contract) return getProperties();
+    if (contract) {
+      notifier.asyncBlock(
+        getProperties(),
+        "Fetched properties",
+        "Failed to fetch properties",
+        "Fetching properties from the blockchain"
+      );
+    }
   }, [contract]);
 
   return (
@@ -609,6 +642,7 @@ const App = () => {
                 <div className="extra-cell">
                   <a
                     style={{ color: "white" }}
+                    href="#AddProperty"
                     className="site-button radius-xl m-l10"
                   >
                     <i className="fa fa-plus m-r5" /> Add Listing
@@ -638,7 +672,6 @@ const App = () => {
             <div className="dlab-bnr-inr-entry align-m dlab-home">
               <div className="bnr-content">
                 <h2>Explore Real Estate</h2>
-                <p>Get access to quality real estate around the world.</p>
               </div>
               <div className="navbar scroll-button">
                 <a
@@ -663,6 +696,8 @@ const App = () => {
                 <h2 className="box-title">
                   Explore Properties on the Blockchain
                 </h2>
+                <p>Get access to quality real estate around the world.</p>
+                <h4>cUSD balance : {cUSDBalance}</h4>
                 <div className="dlab-separator bg-primary" />
               </div>
               <div className="site-filters clearfix center m-b40 listing-filters">
@@ -816,7 +851,10 @@ const App = () => {
 
           {/* add property starts */}
 
-          <div className="section-full bg-img-fix bg-white content-inner">
+          <div
+            id="AddProperty"
+            className="section-full bg-img-fix bg-white content-inner"
+          >
             <div className="container">
               <div className="section-head text-center">
                 <h2 className="box-title">Add Property</h2>
@@ -949,16 +987,7 @@ const App = () => {
                 <span>© 2021 Real Estate</span>{" "}
               </div>
               <div className="col-md-6 col-sm-12 text-right">
-                <div className="widget-link ">
-                  {/* <ul>
-                    <li>
-                      <a href="help-desk.html"> Help Desk</a>
-                    </li>
-                    <li>
-                      <a href="privacy-policy.html"> Privacy Policy</a>
-                    </li>
-                  </ul> */}
-                </div>
+                <div className="widget-link "></div>
               </div>
             </div>
           </div>
