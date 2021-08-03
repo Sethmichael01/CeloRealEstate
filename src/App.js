@@ -9,12 +9,18 @@ import BigNumber from "bignumber.js";
 import Estate from "./abis/Estate.abi.json";
 import erc20Abi from "./abis/erc20.abi.json";
 
+// import loader library
+import AWN from "awesome-notifications";
+
 // import css
 import "@celo-tools/use-contractkit/lib/styles.css";
 
 // addresses
 const celo_address = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 const real_estate_address = "0xe3A3F5dBA7b45FDe3572363e0fD62bDc2374C652";
+
+// initialize library
+const notifier = new AWN();
 
 const App = () => {
   const [celoBalance, setCeloBalance] = useState(0);
@@ -47,12 +53,14 @@ const App = () => {
 
   useEffect(() => {
     // connect the users wallet
+
     connectCeloWallet();
   }, []);
 
   const connectCeloWallet = async () => {
     if (window.celo) {
       // notification("⚠️ Please approve this DApp to use it.")
+
       try {
         await window.celo.enable();
         // notificationOff()
@@ -67,12 +75,15 @@ const App = () => {
         await setAddress(user_address);
 
         await setKit(kit);
+        return true;
       } catch (error) {
         console.log({ error });
         // notification(`⚠️ ${error}.`)
       }
     } else {
-      console.log("please install the extension");
+      notifier.alert(
+        "You need to install the CeloExtensionWallet to use this dapp "
+      );
       // notification("⚠️ Please install the CeloExtensionWallet.")
     }
   };
@@ -137,11 +148,8 @@ const App = () => {
     setavailableProperties(available_properties);
     setallProperties(all_properties);
     setnotAvailableProperties(not_available_properties);
+    return true;
   };
-
-  useEffect(() => {
-    if (contract) return getProperties();
-  }, [contract]);
 
   const buyProperty = async (_price, _index) => {
     try {
@@ -149,17 +157,38 @@ const App = () => {
 
       const cost = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
 
-      console.log({ cost, _index });
-      const result = await cUSDContract.methods
-        .approve(real_estate_address, cost)
-        .send({ from: address });
+      notifier.asyncBlock(
+        await cUSDContract.methods
+          .approve(real_estate_address, cost)
+          .send({ from: address })
+      );
 
-      await contract.methods.buyProperty(_index).send({ from: address });
+      notifier.asyncBlock(
+        await contract.methods.buyProperty(_index).send({ from: address }),
+        "Property has been purchased successfully!!!"
+      );
       // return result
       getBalance();
       getProperties();
     } catch (error) {
       console.log({ error });
+    }
+  };
+
+  const _contract_add_property = async() => {
+    try {
+     await contract.methods
+        .addProperty(
+          property_title,
+          property_description,
+          property_image,
+          property_price
+        )
+        .send({ from: address });
+       await getProperties();
+      return true;
+    } catch (error) {
+    throw error
     }
   };
 
@@ -183,23 +212,17 @@ const App = () => {
         return alert("Please enter all fields");
       }
       const cUSDContract = new kit.web3.eth.Contract(erc20Abi, celo_address);
-
       const price = new BigNumber(property_price)
         .shiftedBy(ERC20_DECIMALS)
         .toString();
+      notifier.asyncBlock(
+        _contract_add_property(),
+        "Property has been added successfully...",
+        "Adding property failed",
+        "Adding Property to the Blockchain..."
+      );
 
-      console.log({ price });
-
-      await contract.methods
-        .addProperty(
-          property_title,
-          property_description,
-          property_image,
-          property_price
-        )
-        .send({ from: address });
-
-      getProperties();
+      
     } catch (error) {
       console.log({ error });
     }
@@ -575,7 +598,14 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (contract) return getProperties();
+    if (contract) {
+      notifier.asyncBlock(
+        getProperties(),
+        "Fetched properties",
+        "Failed to fetch properties",
+        "Fetching properties from the blockchain"
+      );
+    }
   }, [contract]);
 
   return (
@@ -609,8 +639,7 @@ const App = () => {
                 <div className="extra-cell">
                   <a
                     style={{ color: "white" }}
-
-                    href = "#AddProperty"
+                    href="#AddProperty"
                     className="site-button radius-xl m-l10"
                   >
                     <i className="fa fa-plus m-r5" /> Add Listing
@@ -818,7 +847,10 @@ const App = () => {
 
           {/* add property starts */}
 
-          <div id = "AddProperty" className="section-full bg-img-fix bg-white content-inner">
+          <div
+            id="AddProperty"
+            className="section-full bg-img-fix bg-white content-inner"
+          >
             <div className="container">
               <div className="section-head text-center">
                 <h2 className="box-title">Add Property</h2>
@@ -952,14 +984,7 @@ const App = () => {
               </div>
               <div className="col-md-6 col-sm-12 text-right">
                 <div className="widget-link ">
-                  {/* <ul>
-                    <li>
-                      <a href="help-desk.html"> Help Desk</a>
-                    </li>
-                    <li>
-                      <a href="privacy-policy.html"> Privacy Policy</a>
-                    </li>
-                  </ul> */}
+               
                 </div>
               </div>
             </div>

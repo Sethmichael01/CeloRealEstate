@@ -59,7 +59,7 @@ address payable internal onwerAddress;
     }
 
 
-// add a game to the blockchain
+// add a property to the blockchain
   function addProperty(
     string memory _title,
     string memory _description,
@@ -128,6 +128,12 @@ address payable internal onwerAddress;
 
     }
 
+
+    //owner of the property can transfer ownership to another user
+    function transferOwnership(uint _id, address _beneficiary) public onlyOwner(_id){
+            properties[_id].owner = payable(_beneficiary);
+
+    }
 
 }
 
