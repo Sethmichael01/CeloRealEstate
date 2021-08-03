@@ -609,6 +609,8 @@ const App = () => {
                 <div className="extra-cell">
                   <a
                     style={{ color: "white" }}
+
+                    href = "#AddProperty"
                     className="site-button radius-xl m-l10"
                   >
                     <i className="fa fa-plus m-r5" /> Add Listing
@@ -816,7 +818,7 @@ const App = () => {
 
           {/* add property starts */}
 
-          <div className="section-full bg-img-fix bg-white content-inner">
+          <div id = "AddProperty" className="section-full bg-img-fix bg-white content-inner">
             <div className="container">
               <div className="section-head text-center">
                 <h2 className="box-title">Add Property</h2>
