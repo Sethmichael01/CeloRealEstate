@@ -147,33 +147,42 @@ const App = () => {
     return true;
   };
 
+  const _contract_buy_property = async (_price, _index) => {
+    const cUSDContract = new kit.web3.eth.Contract(erc20Abi, celo_address);
+
+    const cost = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
+
+    try {
+      await cUSDContract.methods
+        .approve(real_estate_address, cost)
+        .send({ from: address });
+
+      await contract.methods.buyProperty(_index).send({ from: address });
+      // return result
+      await getBalance();
+      await getProperties();
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const buyProperty = async (_price, _index) => {
     try {
-      const cUSDContract = new kit.web3.eth.Contract(erc20Abi, celo_address);
-
-      const cost = new BigNumber(_price).shiftedBy(ERC20_DECIMALS).toString();
-
       notifier.asyncBlock(
-        await cUSDContract.methods
-          .approve(real_estate_address, cost)
-          .send({ from: address })
+        _contract_buy_property(_price, _index),
+        "Property has been purchased successfully!!!",
+        "Failed to purchase property",
+        "Purchasing your dream property"
       );
-
-      notifier.asyncBlock(
-        await contract.methods.buyProperty(_index).send({ from: address }),
-        "Property has been purchased successfully!!!"
-      );
-      // return result
-      getBalance();
-      getProperties();
     } catch (error) {
       console.log({ error });
     }
   };
 
-  const _contract_add_property = async() => {
+  const _contract_add_property = async () => {
     try {
-     await contract.methods
+      await contract.methods
         .addProperty(
           property_title,
           property_description,
@@ -181,10 +190,10 @@ const App = () => {
           property_price
         )
         .send({ from: address });
-       await getProperties();
+      await getProperties();
       return true;
     } catch (error) {
-    throw error
+      throw error;
     }
   };
 
@@ -217,8 +226,6 @@ const App = () => {
         "Adding property failed",
         "Adding Property to the Blockchain..."
       );
-
-      
     } catch (error) {
       console.log({ error });
     }
@@ -665,7 +672,6 @@ const App = () => {
             <div className="dlab-bnr-inr-entry align-m dlab-home">
               <div className="bnr-content">
                 <h2>Explore Real Estate</h2>
-            
               </div>
               <div className="navbar scroll-button">
                 <a
@@ -981,9 +987,7 @@ const App = () => {
                 <span>© 2021 Real Estate</span>{" "}
               </div>
               <div className="col-md-6 col-sm-12 text-right">
-                <div className="widget-link ">
-               
-                </div>
+                <div className="widget-link "></div>
               </div>
             </div>
           </div>
