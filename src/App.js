@@ -23,8 +23,6 @@ const real_estate_address = "0xe3A3F5dBA7b45FDe3572363e0fD62bDc2374C652";
 const notifier = new AWN();
 
 const App = () => {
-  const [celoBalance, setCeloBalance] = useState(0);
-
   const [cUSDBalance, setcUSDBalance] = useState(0);
   const [contract, setcontract] = useState(null);
   const [address, setAddress] = useState(null);
@@ -98,13 +96,11 @@ const App = () => {
 
   const getBalance = async () => {
     const balance = await kit.getTotalBalance(address);
-    const celoBalance = balance.CELO.shiftedBy(-ERC20_DECIMALS).toFixed(2);
     const USDBalance = balance.cUSD.shiftedBy(-ERC20_DECIMALS).toFixed(2);
 
     const contract = new kit.web3.eth.Contract(Estate, real_estate_address);
 
     setcontract(contract);
-    setCeloBalance(celoBalance);
     setcUSDBalance(USDBalance);
   };
 
@@ -669,7 +665,7 @@ const App = () => {
             <div className="dlab-bnr-inr-entry align-m dlab-home">
               <div className="bnr-content">
                 <h2>Explore Real Estate</h2>
-                <p>Get access to quality real estate around the world.</p>
+            
               </div>
               <div className="navbar scroll-button">
                 <a
@@ -694,6 +690,8 @@ const App = () => {
                 <h2 className="box-title">
                   Explore Properties on the Blockchain
                 </h2>
+                <p>Get access to quality real estate around the world.</p>
+                <h4>cUSD balance : {cUSDBalance}</h4>
                 <div className="dlab-separator bg-primary" />
               </div>
               <div className="site-filters clearfix center m-b40 listing-filters">
